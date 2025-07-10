@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Word Turbo</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #34495e;
+            --container-bg: #ecf0f1;
+            --primary-text: #2c3e50;
+            --secondary-text: #7f8c8d;
+            --accent-color: #2980b9;
+            --accent-hover: #3498db;
+            --correct-color: #27ae60;
+            --incorrect-color: #c0392b;
+            --tile-bg: #f1c40f;
+            --tile-shadow: #f39c12;
+            --dl-bg: #3498db; --dl-shadow: #2980b9;
+            --tl-bg: #9b59b6; --tl-shadow: #8e44ad;
+            --dw-bg: #e67e22; --dw-shadow: #d35400;
+            --tw-bg: #e74c3c; --tw-shadow: #c0392b;
+        }
+
+        body { font-family: 'Lexend Deca', sans-serif; background-color: var(--bg-color); color: var(--primary-text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .screen { background-color: var(--container-bg); border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); padding: 30px; width: 100%; max-width: 500px; text-align: center; }
+        #game-screen, #end-screen { display: none; }
+        h1, h2 { margin-top: 0; }
+        #status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.5em; font-weight: 700; }
+        #score { color: var(--correct-color); transition: transform 0.2s ease-out; }
+        #timer { color: var(--incorrect-color); }
+        #letter-tiles { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; user-select: none; perspective: 1000px; }
+        .tile { width: 45px; height: 45px; background-color: var(--tile-bg); color: white; border-radius: 8px; display: inline-flex; justify-content: center; align-items: center; font-size: 1.8em; font-weight: 700; text-transform: uppercase; position: relative; box-shadow: 0 4px 0 var(--tile-shadow); transition: all 0.2s ease; cursor: pointer; }
+        .tile.used { opacity: 0.4; transform: scale(0.9); cursor: not-allowed; }
+        .tile.pop-in { animation: popIn 0.3s ease-out forwards; }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .tile .score { position: absolute; bottom: 2px; right: 4px; font-size: 0.5em; font-weight: 400; }
+        .tile-dl { background-color: var(--dl-bg); box-shadow: 0 4px 0 var(--dl-shadow); } .tile-tl { background-color: var(--tl-bg); box-shadow: 0 4px 0 var(--tl-shadow); } .tile-dw { background-color: var(--dw-bg); box-shadow: 0 4px 0 var(--dw-shadow); } .tile-tw { background-color: var(--tw-bg); box-shadow: 0 4px 0 var(--tw-shadow); }
+        .tile::after { content: attr(data-bonus); position: absolute; top: 2px; left: 4px; font-size: 0.5em; font-weight: 700; }
+        #input-area { display: flex; gap: 10px; position: relative; }
+        #word-input { flex-grow: 1; padding: 12px; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 1.2em; text-transform: uppercase; transition: border-color 0.2s; }
+        #word-input:focus { outline: none; border-color: var(--accent-color); }
+        .btn { padding: 12px 20px; font-size: 1em; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; background-color: var(--accent-color); color: white; }
+        .btn:hover:not(:disabled) { background-color: var(--accent-hover); }
+        .btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        #clear-btn { position: absolute; right: 105px; top: 50%; transform: translateY(-50%); font-size: 1.5em; background: none; border: none; color: var(--secondary-text); cursor: pointer; padding: 5px; opacity: 0.6; }
+        #clear-btn:hover { opacity: 1; }
+        #feedback { min-height: 25px; margin-top: 15px; font-size: 1.1em; font-weight: 700; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 15px; } .action-buttons .btn { flex-grow: 1; }
+        #found-words-area { margin-top: 20px; background: white; padding: 15px; border-radius: 8px; height: 150px; overflow-y: auto; text-align: left; }
+        #found-words-list { list-style-type: none; padding: 0; margin: 0; }
+        #found-words-list li { padding: 2px 5px; border-radius: 4px; animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        #found-words-list li:nth-child(even) { background-color: #f8f9fa; }
+        #start-screen .btn, #end-screen .btn { padding: 15px 30px; font-size: 1.2em; margin: 10px; }
+        #end-screen #share-btn { background-color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <audio id="click-sound" src="https://www.soundjay.com/buttons/sounds/button-40.mp3" preload="auto"></audio>
+    <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
+    <audio id="error-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+
+    <div id="start-screen" class="screen">
+        <h1>Quick Word Turbo</h1>
+        <p>Click the letters or type to form words. Find as many as you can before time runs out!</p>
+        <h2>Choose your session:</h2>
+        <button class="btn" onclick="initializeGame(180)">3 Minute Sprint</button>
+        <button class="btn" onclick="initializeGame(300)">5 Minute Marathon</button>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="status-bar">
+            <div id="score">Score: 0</div>
+            <div id="timer">Time: 00:00</div>
+        </div>
+        <div id="letter-tiles"></div>
+        <div id="input-area">
+            <input type="text" id="word-input" placeholder="CLICK OR TYPE" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <button id="clear-btn" title="Clear input">✖</button>
+            <button id="submit-btn" class="btn">Submit</button>
+        </div>
+        <p id="feedback">&nbsp;</p>
+        <div class="action-buttons">
+            <button id="shuffle-btn" class="btn" style="background-color: #9b59b6;">Shuffle (Free)</button>
+            <button id="refresh-btn" class="btn" style="background-color: #e67e22;">New Tiles (-10s)</button>
+        </div>
+        <div id="found-words-area">
+            <h3>Found Words:</h3>
+            <ul id="found-words-list"></ul>
+        </div>
+    </div>
+    
+    <div id="end-screen" class="screen">
+        <h2>Time's Up!</h2>
+        <p id="final-score" style="font-size: 1.8em; margin: 20px 0;"></p>
+        <button id="share-btn" class="btn">Share Score</button>
+        <button id="play-again-btn" class="btn" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const ui = {
+            start: document.getElementById('start-screen'), game: document.getElementById('game-screen'), end: document.getElementById('end-screen'),
+            score: document.getElementById('score'), timer: document.getElementById('timer'), tiles: document.getElementById('letter-tiles'),
+            input: document.getElementById('word-input'), submit: document.getElementById('submit-btn'), clear: document.getElementById('clear-btn'),
+            feedback: document.getElementById('feedback'), refresh: document.getElementById('refresh-btn'), shuffle: document.getElementById('shuffle-btn'),
+            foundList: document.getElementById('found-words-list'), finalScore: document.getElementById('final-score'), share: document.getElementById('share-btn'),
+            sounds: { click: document.getElementById('click-sound'), correct: document.getElementById('correct-sound'), error: document.getElementById('error-sound') }
+        };
+
+        // --- Game Config ---
+        const LETTER_SCORES = {'A':1,'B':3,'C':3,'D':2,'E':1,'F':4,'G':2,'H':4,'I':1,'J':8,'K':5,'L':1,'M':3,'N':1,'O':1,'P':3,'Q':10,'R':1,'S':1,'T':1,'U':1,'V':4,'W':4,'X':8,'Y':4,'Z':10};
+        const LETTER_FREQUENCIES = {'A':9,'B':2,'C':2,'D':4,'E':12,'F':2,'G':3,'H':2,'I':9,'J':1,'K':1,'L':4,'M':2,'N':6,'O':8,'P':2,'Q':1,'R':6,'S':4,'T':6,'U':4,'V':2,'W':2,'X':1,'Y':2,'Z':1};
+        const BONUS_CHANCE = 0.4, BONUS_WEIGHTS = {'dl':10,'tl':5,'dw':3,'tw':1}, BINGO_BONUS = 50;
+        
+        // --- Game State ---
+        let state = { score: 0, timeLeft: 0, isChecking: false, letters: [], letterBag: [], foundWords: new Set(), timerInterval: null, nextId: 0 };
+
+        function createLetterBag() { state.letterBag = []; for (const l in LETTER_FREQUENCIES) { for (let i = 0; i < LETTER_FREQUENCIES[l]; i++) state.letterBag.push(l) } }
+        function drawLetters(count) { const d = []; for (let i = 0; i < count; i++) { if (state.letterBag.length === 0) createLetterBag(); const r = Math.floor(Math.random() * state.letterBag.length); d.push({ id: state.nextId++, letter: state.letterBag.splice(r, 1)[0], bonus: 'none' }) } return d; }
+        function assignRandomBonus(letters) { if (Math.random() < BONUS_CHANCE) { const w = []; for (const b in BONUS_WEIGHTS) { for (let i = 0; i < BONUS_WEIGHTS[b]; i++) w.push(b) } const rB = w[Math.floor(Math.random() * w.length)]; const rI = Math.floor(Math.random() * letters.length); if (letters[rI]) letters[rI].bonus = rB } return letters; }
+
+        function displayLetters() {
+            ui.tiles.innerHTML = '';
+            state.letters.forEach((lObj, index) => {
+                const t = document.createElement('div');
+                t.className = 'tile pop-in';
+                t.style.animationDelay = `${index * 50}ms`;
+                if (lObj.bonus !== 'none') { t.classList.add(`tile-${lObj.bonus}`); t.setAttribute('data-bonus', lObj.bonus.toUpperCase()); }
+                t.textContent = lObj.letter;
+                const s = document.createElement('span'); s.className = 'score'; s.textContent = LETTER_SCORES[lObj.letter]; t.appendChild(s);
+                t.dataset.id = lObj.id;
+                t.addEventListener('click', () => handleTileClick(lObj, t));
+                ui.tiles.appendChild(t);
+            });
+            updateUsedTiles();
+        }
+
+        function handleTileClick(letterObject, tileElement) {
+            if (tileElement.classList.contains('used')) return;
+            ui.sounds.click.currentTime = 0; ui.sounds.click.play();
+            ui.input.value += letterObject.letter;
+            updateUsedTiles();
+        }
+
+        function updateUsedTiles() {
+            const currentInput = ui.input.value.toUpperCase();
+            let availableLetters = state.letters.map(l => ({...l})); // Create a disposable copy
+            document.querySelectorAll('.tile').forEach(t => t.classList.remove('used'));
+
+            for (const char of currentInput) {
+                const letterIndex = availableLetters.findIndex(l => l.letter === char);
+                if (letterIndex > -1) {
+                    const letterId = availableLetters[letterIndex].id;
+                    const tileEl = document.querySelector(`.tile[data-id='${letterId}']`);
+                    if (tileEl) tileEl.classList.add('used');
+                    availableLetters.splice(letterIndex, 1);
+                }
+            }
+        }
+
+        function initializeGame(duration) {
+            state = { ...state, score: 0, timeLeft: duration, isChecking: false, foundWords: new Set(), nextId: 0 };
+            ui.foundList.innerHTML = ''; ui.score.textContent = 'Score: 0'; ui.input.value = ''; ui.feedback.textContent = '\u00A0';
+            createLetterBag(); state.letters = assignRandomBonus(drawLetters(7));
+            displayLetters();
+            ui.start.style.display = 'none'; ui.end.style.display = 'none'; ui.game.style.display = 'block';
+            ui.input.focus(); startGameTimer();
+        }
+
+        function startGameTimer() { if (state.timerInterval) clearInterval(state.timerInterval); const u = () => { state.timeLeft--; const m = String(Math.floor(state.timeLeft / 60)).padStart(2, '0'), s = String(state.timeLeft % 60).padStart(2, '0'); ui.timer.textContent = `Time: ${m}:${s}`; if (state.timeLeft <= 0) endGame() }; u(); state.timerInterval = setInterval(u, 1000); }
+        
+        async function handleSubmitWord() {
+            if (state.isChecking) return;
+            const word = ui.input.value.toUpperCase();
+            if (word.length < 3) { setFeedback("Word must be 3+ letters!", true); return; }
+            if (state.foundWords.has(word)) { setFeedback("Already found!", true); return; }
+            if (!checkLettersAvailable(word)) { setFeedback("Letters not available!", true); return; }
+            clearInterval(state.timerInterval); state.isChecking = true;
+            ui.submit.disabled = true; ui.input.disabled = true;
+            setFeedback("Checking...", false, '#7f8c8d');
+            try { const r = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`); if (r.ok) { processValidWord(word) } else { setFeedback("Not a valid word!", true) } } catch (e) { console.error("API Error:", e); setFeedback("Network error.", true) } finally { state.isChecking = false; ui.submit.disabled = false; ui.input.disabled = false; clearInput(); if (state.timeLeft > 0) startGameTimer() }
+        }
+
+        function processValidWord(word) {
+            ui.sounds.correct.play();
+            let tempLetters = JSON.parse(JSON.stringify(state.letters)); let wordScore = 0, wordMultiplier = 1, bonusApplied = '', isBingo = word.length === 7;
+            for (const char of word) {
+                const idx = tempLetters.findIndex(l => l.letter === char);
+                if (idx > -1) {
+                    const lObj = tempLetters[idx]; let letterScore = LETTER_SCORES[lObj.letter];
+                    if (lObj.bonus !== 'none') { switch (lObj.bonus) { case 'dl': letterScore *= 2; bonusApplied = 'Double Letter!'; break; case 'tl': letterScore *= 3; bonusApplied = 'Triple Letter!'; break; case 'dw': wordMultiplier *= 2; bonusApplied = 'DOUBLE WORD!'; break; case 'tw': wordMultiplier *= 3; bonusApplied = 'TRIPLE WORD!'; break; } }
+                    wordScore += letterScore; tempLetters.splice(idx, 1)
+                }
+            }
+            let finalWordScore = wordScore * wordMultiplier;
+            if (isBingo) finalWordScore += BINGO_BONUS;
+            state.score += finalWordScore; state.foundWords.add(word);
+            let feedbackText = `+${finalWordScore} for "${word}"!`;
+            if (isBingo) feedbackText = `BINGO! +${finalWordScore}`; else if (bonusApplied) feedbackText = `${bonusApplied} +${finalWordScore}`;
+            setFeedback(feedbackText, false, 'var(--correct-color)');
+            ui.score.textContent = `Score: ${state.score}`;
+            ui.score.style.transform = 'scale(1.2)'; setTimeout(() => ui.score.style.transform = 'scale(1)', 200);
+            const li = document.createElement('li'); li.textContent = word; ui.foundList.prepend(li);
+            refreshUsedLetters(word);
+        }
+        
+        function checkLettersAvailable(word) { const temp = state.letters.map(l => l.letter); for (const char of word) { const i = temp.indexOf(char); if (i === -1) return false; temp.splice(i, 1) } return true; }
+        
+        function setFeedback(msg, isError, color) {
+            if (isError) ui.sounds.error.play();
+            ui.feedback.textContent = msg;
+            ui.feedback.style.color = isError ? 'var(--incorrect-color)' : color;
+        }
+
+        function refreshUsedLetters(word) {
+            const toRemove = word.split('');
+            toRemove.forEach(char => {
+                const index = state.letters.findIndex(lObj => lObj.letter === char);
+                if (index > -1) state.letters.splice(index, 1);
+            });
+            const newLetters = drawLetters(toRemove.length);
+            state.letters.push(...newLetters);
+            state.letters = assignRandomBonus(state.letters);
+            setTimeout(displayLetters, 200);
+        }
+
+        function handleFullRefresh() { if (state.isChecking) return; if (state.timeLeft > 10) { state.timeLeft -= 10; state.letters = assignRandomBonus(drawLetters(7)); displayLetters(); setFeedback("New tiles! (-10s)", false, '#7f8c8d'); } else { setFeedback("Not enough time!", true); } }
+        function handleShuffle() { state.letters.sort(() => Math.random() - .5); displayLetters(); }
+        function clearInput() { ui.input.value = ''; updateUsedTiles(); }
+        function endGame() { clearInterval(state.timerInterval); ui.game.style.display = 'none'; ui.end.style.display = 'block'; ui.finalScore.textContent = `Final Score: ${state.score}`; }
+        
+        // --- Event Listeners ---
+        ui.submit.addEventListener('click', handleSubmitWord);
+        ui.input.addEventListener('input', updateUsedTiles);
+        ui.input.addEventListener('keyup', (e) => { if (e.key === 'Enter') handleSubmitWord(); });
+        ui.clear.addEventListener('click', clearInput);
+        ui.refresh.addEventListener('click', handleFullRefresh);
+        ui.shuffle.addEventListener('click', handleShuffle);
+        ui.share.addEventListener('click', () => { const shareText = `I scored ${state.score} in Quick Word Turbo! Can you beat me?`; if (navigator.share) { navigator.share({ title: 'Quick Word Turbo Score', text: shareText }).catch(console.error) } else { navigator.clipboard.writeText(shareText).then(() => alert('Score copied to clipboard!')) } });
+    </script>
+</body>
+</html>
