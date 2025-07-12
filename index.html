@@ -82,7 +82,7 @@
             <button id="clear-btn" title="Clear input">✖</button>
             <button id="submit-btn" class="btn">Submit</button>
         </div>
-        <p id="feedback">&nbsp;</p>
+        <p id="feedback"> </p>
         <div class="action-buttons">
             <button id="shuffle-btn" class="btn" style="background-color: #9b59b6;">Shuffle (Free)</button>
             <button id="refresh-btn" class="btn" style="background-color: #e67e22;">New Tiles (-10s)</button>
@@ -240,7 +240,7 @@
         ui.clear.addEventListener('click', clearInput);
         ui.refresh.addEventListener('click', handleFullRefresh);
         ui.shuffle.addEventListener('click', handleShuffle);
-        ui.share.addEventListener('click', () => { const shareText = `I scored ${state.score} in Quick Word Turbo! Can you beat me?`; if (navigator.share) { navigator.share({ title: 'Quick Word Turbo Score', text: shareText }).catch(console.error) } else { navigator.clipboard.writeText(shareText).then(() => alert('Score copied to clipboard!')) } });
+        ui.share.addEventListener('click', () => { const shareText = `I scored ${state.score} in Quick Word Turbo! Can you beat me? Play here: https://bhargav-sai-r.github.io/quick-word-turbo-game/`; if (navigator.share) { navigator.share({ title: 'Quick Word Turbo Score', text: shareText }).catch(console.error) } else { navigator.clipboard.writeText(shareText).then(() => alert('Score and link copied to clipboard!')) } });
     </script>
 </body>
 </html>
